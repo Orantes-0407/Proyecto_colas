@@ -1,3 +1,7 @@
+LINK DEL VIDEO:https://drive.google.com/file/d/121FFHyWKaKtkjiwpa16KDJmy0e7UfgZY/view?usp=sharing
+
+
+
 Procesamiento de Transacciones Bancarias con RabbitMQ y Java
 Descripción del Proyecto
 Este proyecto implementa un sistema distribuido para el procesamiento de transacciones bancarias utilizando RabbitMQ, Java y Maven siguiendo el patrón Producer–Consumer. El sistema obtiene un lote de transacciones desde una API externa, distribuye cada transacción a una cola según el banco destino y posteriormente un consumidor procesa cada mensaje enviándolo a otra API para su almacenamiento.
