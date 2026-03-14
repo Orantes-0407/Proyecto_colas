@@ -8,7 +8,7 @@ public class Main {
         System.out.println("Score for example array: " + result);
     }
 
-    // Returns +1 for each even number (0 counted as even), +3 for each odd number except 5, and +5 for each 5
+  
     public static int score(int[] nums) {
         if (nums == null) return 0;
         int total = 0;
@@ -16,13 +16,14 @@ public class Main {
             if (n == 5) {
                 total += 5;
             } else if (n % 2 == 0) {
-                // even (0 included)
+              
                 total += 1;
             } else {
-                // odd and not 5
+           
                 total += 3;
             }
         }
         return total;
     }
 }
+//Justificacion de respuesta:Solo se usan un número fijo de variables primitivas (total y la variable de iteración). No se crean estructuras auxiliares cuyo tamaño dependa de n (el arreglo de entrada no se cuenta como espacio adicional).

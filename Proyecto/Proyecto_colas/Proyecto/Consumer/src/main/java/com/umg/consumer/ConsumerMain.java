@@ -9,11 +9,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 public class ConsumerMain {
 
@@ -28,9 +23,6 @@ public class ConsumerMain {
 
     // Colas a escuchar
     private static final String[] QUEUES = {"BAC", "BANRURAL", "BI", "GYT"};
-    private static final String HIGH_PRIORITY_QUEUE = "BAC";
-    // Cola para transacciones duplicadas
-    private static final String DUPLICATES_QUEUE = "cola_duplicados";
 
     public static void main(String[] args) throws Exception {
 
@@ -51,25 +43,13 @@ public class ConsumerMain {
 
         ObjectMapper mapper = new ObjectMapper();
         HttpClient httpClient = HttpClient.newHttpClient();
-        // Set para almacenar los IDs de transacciones ya procesadas
-        Set<String> processedTxIds = new HashSet<>();
 
         System.out.println("✅ Consumer conectado a RabbitMQ");
         System.out.println("👂 Escuchando colas...");
 
-        // -- INICIO: Lógica de Prioridad --
-        // Reordena las colas para dar prioridad a la cola de alta prioridad
-        List<String> queueList = new ArrayList<>(Arrays.asList(QUEUES));
-        if (queueList.remove(HIGH_PRIORITY_QUEUE)) {
-            queueList.add(0, HIGH_PRIORITY_QUEUE);
-            System.out.println("⭐ Alta prioridad activada para la cola: " + HIGH_PRIORITY_QUEUE);
-        }
-        // -- FIN: Lógica de Prioridad --
-
-        for (String queueName : queueList) {
+        for (String queueName : QUEUES) {
 
             channel.queueDeclare(queueName, true, false, false, null);
-            channel.queueDeclare(DUPLICATES_QUEUE, true, false, false, null);
 
             DeliverCallback deliverCallback = (consumerTag, delivery) -> {
 
@@ -82,25 +62,12 @@ public class ConsumerMain {
                     // JSON -> objeto
                     Transaccion tx = mapper.readValue(body, Transaccion.class);
 
-                    // -- INICIO: Control de duplicados --
-                    // Si el ID de la transacción ya fue procesado, se envía a la cola de duplicados
-                    if (processedTxIds.contains(tx.getIdTransaccion())) {
-                        channel.basicPublish("", DUPLICATES_QUEUE, null, body.getBytes(StandardCharsets.UTF_8));
-                        channel.basicAck(deliveryTag, false);
-                        System.out.println(String.format("[DUPLICADA] Transacción %s enviada a cola: %s", tx.getIdTransaccion(), DUPLICATES_QUEUE));
-                        return; // Finaliza el procesamiento de este mensaje
-                    } else {
-                        // Si es un ID nuevo, se agrega al set de procesados
-                        processedTxIds.add(tx.getIdTransaccion());
-                    }
-                    // -- FIN: Control de duplicados --
-
                     // Enviar al POST con reintento mínimo 1
                     boolean ok = enviarPostConReintento(httpClient, mapper, tx);
 
                     if (ok) {
                         channel.basicAck(deliveryTag, false);
-                        System.out.println(String.format("[PROCESADA] Transacción %s procesada exitosamente.", tx.getIdTransaccion()));
+                        System.out.println("✅ POST OK + ACK: " + tx.getIdTransaccion());
                     } else {
                         channel.basicNack(deliveryTag, false, true);
                         System.out.println("❌ POST falló 2 veces -> NACK con requeue: " + tx.getIdTransaccion());
